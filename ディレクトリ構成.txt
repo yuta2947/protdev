@@ -1,0 +1,67 @@
+フォルダー パスの一覧:  ボリューム Windows
+ボリューム シリアル番号は 4482-3CA1 です
+C:\USERS\PRNKM\DESKTOP\プロジェクトフォルダ
+│  ディレクトリ構成.txt
+│  
+├─api-server
+│  │  .gitignore
+│  │  eslint.config.mjs
+│  │  next-env.d.ts
+│  │  next.config.ts
+│  │  package-lock.json
+│  │  package.json
+│  │  postcss.config.mjs
+│  │  README.md
+│  │  tsconfig.json
+│  │  
+│  ├─node_modules
+│  │          
+│  ├─pages
+│  │  │  index.tsx
+│  │  │  _app.tsx
+│  │  │  _document.tsx
+│  │  │  
+│  │  └─api
+│  │          hello.ts
+│  │          
+│  ├─public
+│  │      favicon.ico
+│  │      file.svg
+│  │      globe.svg
+│  │      next.svg
+│  │      vercel.svg
+│  │      window.svg
+│  │      
+│  └─styles
+│          globals.css
+│          
+└─フロント
+    │  .gitignore
+    │  eslint.config.js
+    │  folder-structure.txt
+    │  index.html
+    │  log.txt
+    │  package-lock.json
+    │  package.json
+    │  README.md
+    │  vite.config.js
+    │  
+    ├─.vscode
+    │      launch.json
+    │      
+    ├─node_modules
+    │          
+    ├─public
+    │      vite.svg
+    │     
+　　├―lib
+　　│	　　api.ts
+    └─src
+        │  App.css
+        │  App.tsx
+        │  index.css
+        │  main.tsx
+        │  
+        └─assets
+                react.svg
+                
