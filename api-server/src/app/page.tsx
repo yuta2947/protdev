@@ -1,4 +1,4 @@
-import Image from "next/image";
+
 import OpenAI from "openai";
 
 export default async  function Home() {
