@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import React from 'react';
+import axios from 'axios';
 
 export default function Game() {
-  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [history, setHistory] = useState([Array(25).fill(null)]);
   const [xIsNext, setXIsNext] = useState(true);
   const [currentMove, setCurrentMove] = useState(0);
   const currentSquares = history[currentMove];
+
 
   function handlePlay(nextSquares) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
@@ -47,6 +49,16 @@ export default function Game() {
 }
 
 function Board({ xIsNext, squares, onPlay }) {
+  async function callAiApi() {
+    try {
+      const response = await axios.post('http://localhost:3000/api', {
+        text: "request",
+      });
+      console.log("AIの返答：",JSON.stringify(response.data.received))
+    } catch (error) {
+      console.error("エラー:", error);
+    }
+  }
 
   function handleClick (i) {
     const nextSquares = squares.slice();
@@ -58,9 +70,26 @@ function Board({ xIsNext, squares, onPlay }) {
       nextSquares[i] = "X";
     } else {
       nextSquares[i] = "O";
+      callAiApi();
     }
     onPlay(nextSquares);
 
+  }
+
+  function callAi() {
+
+    const APIEndPint = 'http://localhost:3000/api'
+  
+    const handleSubmit = async () => {
+      try {
+        const response =await axios.post(APIEndPint, {
+          message: 'テストメッセージ'
+        });
+  
+      } catch (error) {
+        console.error('エラー：', error);
+      }
+    };
   }
 
   const winner = calculateWinner(squares);
@@ -87,6 +116,7 @@ function Board({ xIsNext, squares, onPlay }) {
         );
       })}
     </div>
+
     ))}
     </>
   );
@@ -124,4 +154,3 @@ function calculateWinner (squares) {
   }
   return null;
 }
-

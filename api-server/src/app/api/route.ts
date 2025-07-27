@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
+const ai = new GoogleGenAI({});
 const corsHeaders = {
     'Access-Control-Allow-Origin': 'http://localhost:5173',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -8,7 +10,7 @@ const corsHeaders = {
 
 export async function GET() {
     return  new NextResponse(
-        JSON.stringify({ message: 'Hello from API'}),
+        JSON.stringify({ message: 'Get API Response'}),
         {
             status: 200,
             headers: corsHeaders,
@@ -19,8 +21,20 @@ export async function GET() {
 export async function POST(request: Request) {
     const body = await request.json();
     try {
+        const result = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: "あなたについて200字で紹介して"
+        })
+    const aiResponse = result.text;
         return new NextResponse(
-            JSON.stringify({ received: body }),
+            JSON.stringify({ 
+                received: {
+                    postMessage: body.text,
+                    body: 'サーバからの返答',
+                    text: aiResponse
+
+                }
+             }),
             {
                 status: 200,
                 headers:corsHeaders,
