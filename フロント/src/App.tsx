@@ -24,10 +24,10 @@ export default function Game() {
       return;
     }
     setCurrentMove(nextMove);
-    setXIsNext(nextMove % 2 === 0);
+    setXIsNext(true);
   }
 
-  const moves = history.map((squares, move) => {
+  const moves = history.map((_, move) => {
     let description;
     if (move > 0) {
       description = 'Go to move #' + move;
@@ -36,14 +36,16 @@ export default function Game() {
     }
     return (
       <li key={move}>
-        <button onClick={() => jumpTo(move)}
+        <button
+          onClick={() => jumpTo(move)}
           disabled={isAiThinking}
           style={{
             opacity: isAiThinking ? 0.5 : 1,
-            cursor: isAiThinking ? 'no-allowed': 'pointer'
+            cursor: isAiThinking ? 'not-allowed' : 'pointer',
           }}
         >
-        {description}</button>
+          {description}
+        </button>
       </li>
     );
   });
@@ -74,11 +76,18 @@ interface BoardProps {
   setIsAiThinking: (thinking: boolean) => void;
 }
 
-function Board({ xIsNext, squares, onPlay, isAiThinking, setIsAiThinking }: BoardProps) {
+function Board({
+  xIsNext,
+  squares,
+  onPlay,
+  isAiThinking,
+  setIsAiThinking,
+}: BoardProps) {
   async function callAiApi(nextSquares: (string | null)[]): Promise<number> {
     try {
+      const boardString = formatBoardForAI(nextSquares);
       const aiRes = await axios.post('http://localhost:3000/api', {
-        text: nextSquares,
+        text: boardString,
       });
       console.log('Response:', JSON.stringify(aiRes.data.received.text));
       console.log('Response:', JSON.stringify(aiRes.data.received.timestamp));
@@ -94,6 +103,22 @@ function Board({ xIsNext, squares, onPlay, isAiThinking, setIsAiThinking }: Boar
       console.error('エラー:', error);
       throw error;
     }
+  }
+
+  function formatBoardForAI(squares: (string | null)[]): string {
+    let boardString = '盤面の状態:\n';
+    boardString += ' 0 1 2 3 4\n';
+
+    for (let row = 0; row < 5; row++) {
+      boardString += `${row} `;
+      for (let col = 0; col < 5; col++) {
+        const index = row * 5 + col;
+        const value = squares[index];
+        boardString += (value || '.') + ' ';
+      }
+      boardString += '\n';
+    }
+    return boardString;
   }
 
   async function handleClick(i: number) {
@@ -140,7 +165,11 @@ function Board({ xIsNext, squares, onPlay, isAiThinking, setIsAiThinking }: Boar
         }
 
         if (currentSquares[aiPosition] !== null) {
-          console.warn(`AIが占有済みの座標を選択: ${aiPosition}.再試行します (${retryCount + 1}/${maxRetries})`);
+          console.warn(
+            `AIが占有済みの座標を選択: ${aiPosition}.再試行します (${
+              retryCount + 1
+            }/${maxRetries})`,
+          );
           retryCount++;
           continue;
         }
@@ -155,7 +184,7 @@ function Board({ xIsNext, squares, onPlay, isAiThinking, setIsAiThinking }: Boar
         return;
       } catch (error) {
         console.error(
-          `AI AP呼び出しエラー  (試行 ${retryCount + 1}/${maxRetries}):`,
+          `AI API呼び出しエラー  (試行 ${retryCount + 1}/${maxRetries}):`,
           error,
         );
         retryCount++;
