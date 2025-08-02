@@ -40,3 +40,18 @@
 .read-the-docs {
   color: #888;
 }
+
+.ai-thinking {
+  font-weight: bold;
+  color: #e9e1e1;
+}
+
+.dots {
+  animation: blink 1.4s infinite;
+}
+
+@keyframes blink {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1;}
+  80%, 100% {opacity: 0; }
+}
