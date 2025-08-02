@@ -20,12 +20,13 @@ export async function POST(request: Request) {
   const body = await request.json();
   try {
     const result = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
             {
-                role: 'user',
-                parts: [{
-                    text: `5x5の五目並べです。あなたはO(オー)で、相手はX(エックス)です。
+              text: `5x5の五目並べです。あなたはO(オー)で、相手はX(エックス)です。
                     ${body.text}
                     ルール:
                     - 5つ同じ記号を縦、横、斜めに並べると勝利
@@ -34,10 +35,11 @@ export async function POST(request: Request) {
                     - 座標にX(エックス)またはO(オー)が既に配置されている場合は選択不可となります
 
                     あなたの次の一手を[行,列]の形式で答えてください。例: [2,3]
-                    座標のみを回答し、他の説明は不要です。`
-                }],
+                    座標のみを回答し、他の説明は不要です。`,
             },
-        ],
+          ],
+        },
+      ],
     });
     const aiResponse = result.text;
     return new NextResponse(
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
           postMessage: body.text,
           body: 'サーバからの返答',
           text: aiResponse,
-          timestamp: new Date().toLocaleString('ja-JP')
+          timestamp: new Date().toLocaleString('ja-JP'),
         },
       }),
       {

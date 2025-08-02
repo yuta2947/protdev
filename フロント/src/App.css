@@ -42,7 +42,7 @@
 }
 
 .status {
-  font-size:large
+  font-size: large;
 }
 
 .ai-thinking {
@@ -72,7 +72,16 @@
 }
 
 @keyframes blink-sequence {
-  0%, 15% { opacity: 0; }
-  20%, 50% { opacity: 1; }
-  55%, 100% { opacity: 0; }
+  0%,
+  15% {
+    opacity: 0;
+  }
+  20%,
+  50% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
 }
