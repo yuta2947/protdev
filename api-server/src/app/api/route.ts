@@ -20,7 +20,18 @@ export async function POST(request: Request) {
   try {
     const result = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: 'あなたについて200字で紹介して',
+      contents: [
+        {
+            role: 'user',
+            parts: [{
+                text: `5x5の五目並べです。あなたはOです。
+                 現在の盤面: ${body.text}
+                 出力形式: 座標: [行,列]
+                 次の一手の座標のみを出力してください。`
+            },
+          ],
+        },
+      ],
     });
     const aiResponse = result.text;
     return new NextResponse(
@@ -29,6 +40,7 @@ export async function POST(request: Request) {
           postMessage: body.text,
           body: 'サーバからの返答',
           text: aiResponse,
+          timestamp: new Date().toISOString()
         },
       }),
       {

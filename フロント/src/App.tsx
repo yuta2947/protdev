@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import React from 'react';
 import axios from 'axios';
 
@@ -12,7 +12,7 @@ export default function Game() {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
-    setXIsNext(!xIsNext);
+    setXIsNext(prevXIsNext => !prevXIsNext);
   }
 
   function jumpTo(nextMove) {
@@ -47,45 +47,58 @@ export default function Game() {
 }
 
 function Board({ xIsNext, squares, onPlay }) {
-  async function callAiApi() {
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  async function callAiApi(nextSquares: string[]) {
     try {
-      const response = await axios.post('http://localhost:3000/api', {
-        text: 'request',
+      const aiRes = await axios.post('http://localhost:3000/api', {
+        text: nextSquares,
       });
-      console.log('AIの返答:', JSON.stringify(response.data.received));
+      console.log('Response:',JSON.stringify(aiRes.data.received.text))
+      console.log('Response:',JSON.stringify(aiRes.data.received.timestamp))
+      const coordinateText = aiRes.data.received.text;
+      const match  = coordinateText.match(/\[(\d+),(\d+)\]/);
+      if (match) {
+        const row = parseInt(match[1]);
+        const col = parseInt(match[2]);
+        return row * 5 + col;
+      }
+      throw new Error('無効な座標形式');
     } catch (error) {
       console.error('エラー:', error);
+      throw error;
     }
   }
 
-  function handleClick(i) {
-    const nextSquares = squares.slice();
-    if (squares[i] || calculateWinner(squares)) {
+   async function handleClick(i: number) {
+    if (isAiThinking || squares[i] || calculateWinner(squares) || !xIsNext) {
       return;
     }
 
-    if (xIsNext) {
-      nextSquares[i] = 'X';
-    } else {
-      nextSquares[i] = 'O';
-      callAiApi();
-    }
+    const nextSquares: string[] = squares.slice();
+    nextSquares[i] = 'X';
     onPlay(nextSquares);
-  }
 
-  function callAi() {
-    const APIEndPint = 'http://localhost:3000/api';
+    if (calculateWinner(nextSquares)) {
+      return;
+    }
 
-    const handleSubmit = async () => {
-      try {
-        const response = await axios.post(APIEndPint, {
-          message: 'テストメッセージ',
-        });
-      } catch (error) {
-        console.error('エラー：', error);
+    setIsAiThinking(true);
+    try {
+      const aiPosition = await callAiApi(nextSquares);
+      const aiSquares = [...nextSquares];
+      aiSquares[aiPosition] = 'O';
+      onPlay(aiSquares);
+      
+      if (calculateWinner(aiSquares)) {
+        return; 
       }
-    };
+    } catch (error) {
+      console.error('AI処理エラー:', error);
+    } finally {
+      setIsAiThinking(false);
+    }
   }
+    
 
   const winner = calculateWinner(squares);
   let status;
