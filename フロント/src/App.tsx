@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import React from 'react';
 import axios from 'axios';
+import './App.css';
 
 export default function Game() {
-  const [history, setHistory] = useState([Array(25).fill(null)]);
-  const [xIsNext, setXIsNext] = useState(true);
-  const [currentMove, setCurrentMove] = useState(0);
+  const [history, setHistory] = useState<(string | null)[][]>([
+    Array(25).fill(null),
+  ]);
+  const [xIsNext, setXIsNext] = useState<boolean>(true);
+  const [currentMove, setCurrentMove] = useState<number>(0);
   const currentSquares = history[currentMove];
+  const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
 
-  function handlePlay(nextSquares) {
+  function handlePlay(nextSquares: (string | null)[]) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
-    setXIsNext(!xIsNext);
+    setXIsNext((prevXIsNext) => !prevXIsNext);
   }
 
-  function jumpTo(nextMove) {
+  function jumpTo(nextMove: number) {
+    if (isAiThinking) {
+      return;
+    }
     setCurrentMove(nextMove);
     setXIsNext(nextMove % 2 === 0);
   }
@@ -29,7 +36,14 @@ export default function Game() {
     }
     return (
       <li key={move}>
-        <button onClick={() => jumpTo(move)}>{description}</button>
+        <button onClick={() => jumpTo(move)}
+          disabled={isAiThinking}
+          style={{
+            opacity: isAiThinking ? 0.5 : 1,
+            cursor: isAiThinking ? 'no-allowed': 'pointer'
+          }}
+        >
+        {description}</button>
       </li>
     );
   });
@@ -37,7 +51,13 @@ export default function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        <Board
+          xIsNext={xIsNext}
+          squares={currentSquares}
+          onPlay={handlePlay}
+          isAiThinking={isAiThinking}
+          setIsAiThinking={setIsAiThinking}
+        />
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -46,51 +66,145 @@ export default function Game() {
   );
 }
 
-function Board({ xIsNext, squares, onPlay }) {
-  async function callAiApi() {
+interface BoardProps {
+  xIsNext: boolean;
+  squares: (string | null)[];
+  onPlay: (squares: (string | null)[]) => void;
+  isAiThinking: boolean;
+  setIsAiThinking: (thinking: boolean) => void;
+}
+
+function Board({ xIsNext, squares, onPlay, isAiThinking, setIsAiThinking }: BoardProps) {
+  async function callAiApi(nextSquares: (string | null)[]): Promise<number> {
     try {
-      const response = await axios.post('http://localhost:3000/api', {
-        text: 'request',
+      const aiRes = await axios.post('http://localhost:3000/api', {
+        text: nextSquares,
       });
-      console.log('AIの返答:', JSON.stringify(response.data.received));
+      console.log('Response:', JSON.stringify(aiRes.data.received.text));
+      console.log('Response:', JSON.stringify(aiRes.data.received.timestamp));
+      const coordinateText = aiRes.data.received.text;
+      const match = coordinateText.match(/\[(\d+),(\d+)\]/);
+      if (match) {
+        const row = parseInt(match[1]);
+        const col = parseInt(match[2]);
+        return row * 5 + col;
+      }
+      throw new Error('無効な座標形式');
     } catch (error) {
       console.error('エラー:', error);
+      throw error;
     }
   }
 
-  function handleClick(i) {
-    const nextSquares = squares.slice();
-    if (squares[i] || calculateWinner(squares)) {
+  async function handleClick(i: number) {
+    if (isAiThinking || squares[i] || calculateWinner(squares) || !xIsNext) {
       return;
     }
 
-    if (xIsNext) {
-      nextSquares[i] = 'X';
-    } else {
-      nextSquares[i] = 'O';
-      callAiApi();
-    }
+    const nextSquares: (string | null)[] = squares.slice();
+    nextSquares[i] = 'X';
     onPlay(nextSquares);
+
+    if (calculateWinner(nextSquares)) {
+      return;
+    }
+
+    setIsAiThinking(true);
+    try {
+      await executeAiMove(nextSquares);
+    } catch (error) {
+      console.error('AI処理エラー:', error);
+    } finally {
+      setIsAiThinking(false);
+    }
   }
 
-  function callAi() {
-    const APIEndPint = 'http://localhost:3000/api';
+  async function executeAiMove(
+    currentSquares: (string | null)[],
+  ): Promise<void> {
+    const maxRetries = 5;
+    let retryCount = 0;
 
-    const handleSubmit = async () => {
+    while (retryCount < maxRetries) {
       try {
-        const response = await axios.post(APIEndPint, {
-          message: 'テストメッセージ',
-        });
+        const aiPosition = await callAiApi(currentSquares);
+
+        if (aiPosition < 0 || aiPosition >= 25) {
+          console.warn(
+            `AIが無効な座標を選択: ${aiPosition}. 再試行します (${
+              retryCount + 1
+            }/${maxRetries})`,
+          );
+          retryCount++;
+          continue;
+        }
+
+        if (currentSquares[aiPosition] !== null) {
+          console.warn(`AIが占有済みの座標を選択: ${aiPosition}.再試行します (${retryCount + 1}/${maxRetries})`);
+          retryCount++;
+          continue;
+        }
+
+        const aiSquares = [...currentSquares];
+        aiSquares[aiPosition] = 'O';
+        onPlay(aiSquares);
+
+        if (calculateWinner(aiSquares)) {
+          return;
+        }
+        return;
       } catch (error) {
-        console.error('エラー：', error);
+        console.error(
+          `AI AP呼び出しエラー  (試行 ${retryCount + 1}/${maxRetries}):`,
+          error,
+        );
+        retryCount++;
+
+        if (retryCount >= maxRetries) {
+          throw new Error('AI思考の最大試行回数に達しました');
+        }
       }
-    };
+    }
+    console.warn(
+      'AIが有効な手を見つけられませんでした。ランダムな手を選択します。',
+    );
+    executeRandomMove(currentSquares);
+  }
+
+  function executeRandomMove(currentSquares: (string | null)[]): void {
+    const availablePositions = currentSquares
+      .map((square, index) => (square === null ? index : null))
+      .filter((position) => position !== null) as number[];
+
+    if (availablePositions.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availablePositions.length);
+      const randomPosition = availablePositions[randomIndex];
+
+      const aiSquares = [...currentSquares];
+      aiSquares[randomPosition] = 'O';
+      onPlay(aiSquares);
+
+      console.log(
+        `フォールバック: ランダム座標 ${randomPosition} を選択しました`,
+      );
+    }
   }
 
   const winner = calculateWinner(squares);
-  let status;
+  let status: string | React.ReactElement;
   if (winner) {
     status = 'Winner: ' + winner;
+  } else if (isAiThinking) {
+    status = (
+      <span className="ai-thinking">
+        AI思考中
+        <span className="dots">
+          <span className="dot">.</span>
+          <span className="dot">.</span>
+          <span className="dot">.</span>
+        </span>
+      </span>
+    );
   } else {
     status = 'Next player: ' + (xIsNext ? 'X' : 'O');
   }
@@ -116,7 +230,12 @@ function Board({ xIsNext, squares, onPlay }) {
   );
 }
 
-function Square({ value, onSquareClick }) {
+interface SquareProps {
+  value: string | null;
+  onSquareClick: () => void;
+}
+
+function Square({ value, onSquareClick }: SquareProps) {
   return (
     <button className="square" onClick={onSquareClick}>
       {value}
@@ -124,7 +243,7 @@ function Square({ value, onSquareClick }) {
   );
 }
 
-function calculateWinner(squares) {
+function calculateWinner(squares: (string | null)[]): string | null {
   const size = 5;
   const lines: number[][] = [];
 
