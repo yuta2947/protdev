@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { Zen_Tokyo_Zoo } from 'next/font/google';
 
 const ai = new GoogleGenAI({});
 const corsHeaders = {
@@ -57,6 +56,7 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
+    console.error(error);
     return new NextResponse(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: corsHeaders,

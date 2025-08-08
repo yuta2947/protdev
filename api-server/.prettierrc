@@ -3,5 +3,8 @@
     "singleQuote": true,
     "tabWidth": 2,
     "trailingComma": "all",
-    "endOfLine": "lf"
+    "endOfLine": "lf",
+    "rules": {
+      "camelcase": ["error", { "properties": "never", "ignoreDestructuring": false }]
+    }
   }
